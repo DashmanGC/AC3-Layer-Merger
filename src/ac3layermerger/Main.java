@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Dashman
+ * Copyright (C) 2014 Infrid
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
  * @author Jonatan
  */
 public class Main {
@@ -38,16 +37,16 @@ public class Main {
         String destination;
         // TODO code application logic here
         String appname = new java.io.File(Main.class.getProtectionDomain()
-                                          .getCodeSource()
-                                          .getLocation()
-                                          .getPath()).getName();
+                .getCodeSource()
+                .getLocation()
+                .getPath()).getName();
 
         // USE: ac3headerreplacer <original_TIM_folder> <edited_TIM_folder> <output_folder>
-        if (args.length == 1 && args[0].equals("-h")){
+        if (args.length == 1 && args[0].equals("-h")) {
             System.out.println("USE: java -jar " + appname + " <TIM_layer1> <TIM_layer2> <result_TIM>");
             return;
         }
-        if (args.length != 3){
+        if (args.length != 3) {
             System.out.println("ERROR: Wrong number of parameters: " + args.length);
             System.out.println("USE: java -jar " + appname + " <TIM_layer1> <TIM_layer2> <result_TIM>");
             return;
@@ -59,26 +58,26 @@ public class Main {
         layer2 = args[1];
         destination = args[2];
 
-        if (layer1.equals(layer2)){
+        if (layer1.equals(layer2)) {
             System.out.println("ERROR: The original and edited files can't be the same!");
             return;
         }
-        if (!layer1.endsWith(".tim") || !layer2.endsWith(".tim")){
+        if (!layer1.endsWith(".tim") || !layer2.endsWith(".tim")) {
             System.out.println("ERROR: You have to use this with .tim files!");
             return;
         }
 
-        mergeTIM (layer1, layer2, destination);
+        mergeTIM(layer1, layer2, destination);
     }
 
-    public static void mergeTIM(String l1, String l2, String dest){
+    public static void mergeTIM(String l1, String l2, String dest) {
         try {
             // Open the TIM files with the layers, exit if a file doesn't exist
             RandomAccessFile f1 = new RandomAccessFile(l1, "r");
             RandomAccessFile f2 = new RandomAccessFile(l2, "r");
 
             // Stop if the size is different
-            if (f1.length() != f2.length()){
+            if (f1.length() != f2.length()) {
                 f1.close();
                 f2.close();
                 System.err.println("ERROR: The TIM files have different sizes.");
@@ -103,8 +102,8 @@ public class Main {
 
             // Read the image data from both layers (file length - 64) *** FILES MUST ONLY HAVE 1 CLUT, OTHERWISE THIS FAILS!
             long datasize = f1.length() - 64;
-            byte[] l1_data = new byte[(int)datasize];
-            byte[] l2_data = new byte[(int)datasize];
+            byte[] l1_data = new byte[(int) datasize];
+            byte[] l2_data = new byte[(int) datasize];
 
             f1.read(l1_data);
             f2.read(l2_data);
@@ -113,9 +112,9 @@ public class Main {
             f2.close();
 
             // New image data = layer1 data OR layer2 data
-            byte[] new_data = new byte[(int)datasize];
+            byte[] new_data = new byte[(int) datasize];
 
-            for (int i = 0; i < datasize; i++){
+            for (int i = 0; i < datasize; i++) {
                 // Java casts bytes as int for operations. We have to do a little trick here
                 //new_data[i] = l1_data[i] | l2_data[i];
                 //Integer notabyte = l1_data[i] | l2_data[i];
@@ -145,14 +144,13 @@ public class Main {
         } catch (FileNotFoundException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
             System.err.println("ERROR: Files not found.");
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
             System.err.println("ERROR: Could not read from files.");
         }
     }
 
-    public static byte getNewData(byte b1, byte b2){
+    public static byte getNewData(byte b1, byte b2) {
         Integer result = 0x00;
         int color_l1_h1 = 0;
         int color_l2_h1 = 0;
@@ -175,34 +173,32 @@ public class Main {
         // 1, 5, 9 and d are COLOR 2
         // 2, 6, a and e are COLOR 3
         // 3, 7, b and f are COLOR 4
-        color_l1_h1 = b1_h1 %4;
-        color_l1_h2 = b1_h2 %4;
+        color_l1_h1 = b1_h1 % 4;
+        color_l1_h2 = b1_h2 % 4;
 
         // For layer 2:
         // 0 to 3 are COLOR 1
         // 4 to 7 are COLOR 2
         // 8 to b are COLOR 3
         // c to f are COLOR 4
-        if (b2_h1 < 8){
+        if (b2_h1 < 8) {
             if (b2_h1 < 4)
                 color_l2_h1 = 0;
             else
                 color_l2_h1 = 1;
-        }
-        else{
+        } else {
             if (b2_h1 < 12)
                 color_l2_h1 = 2;
             else
                 color_l2_h1 = 3;
         }
 
-        if (b2_h2 < 8){
+        if (b2_h2 < 8) {
             if (b2_h2 < 4)
                 color_l2_h2 = 0;
             else
                 color_l2_h2 = 1;
-        }
-        else{
+        } else {
             if (b2_h2 < 12)
                 color_l2_h2 = 2;
             else
@@ -212,9 +208,9 @@ public class Main {
 
         // Now that we know which colours we want in each layer,
         // we give the final pixel the value that gives the proper colours
-        int byte_L = color_l1_h1 + 4*color_l2_h1;
+        int byte_L = color_l1_h1 + 4 * color_l2_h1;
         byte_L = byte_L << 4;
-        int byte_R = color_l1_h2 + 4*color_l2_h2;
+        int byte_R = color_l1_h2 + 4 * color_l2_h2;
         /*
         // We start with the first half (the rightmost byte)
         switch (color_l1_h2){
