@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Infrid
+ * Copyright (C) 2018 Dashman
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,11 @@ package ac3layermerger;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 
 /**
  * @author Jonatan
@@ -35,51 +38,53 @@ public class Main {
         String layer1;
         String layer2;
         String destination;
-        // TODO code application logic here
-        String appname = new java.io.File(Main.class.getProtectionDomain()
-                .getCodeSource()
-                .getLocation()
-                .getPath()).getName();
 
-        // USE: ac3headerreplacer <original_TIM_folder> <edited_TIM_folder> <output_folder>
-        if (args.length == 1 && args[0].equals("-h")) {
+        String appname = System.getProperty("sun.java.command");
+
+        if (args.length == 0 || (args.length == 1 && args[0].equals("-h"))) {
+            System.out.println("Ace Combat 3 Layer Merger for TIM files v1.2");
             System.out.println("USE: java -jar " + appname + " <TIM_layer1> <TIM_layer2> <result_TIM>");
             return;
         }
+
         if (args.length != 3) {
             System.out.println("ERROR: Wrong number of parameters: " + args.length);
             System.out.println("USE: java -jar " + appname + " <TIM_layer1> <TIM_layer2> <result_TIM>");
             return;
         }
 
-        //original = formatFolder(args[0]);
-        //edited = formatFolder(args[1]);
-        layer1 = args[0];
-        layer2 = args[1];
-        destination = args[2];
+        Path pathLayer1 = Paths.get(args[0]).toAbsolutePath();
+        Path pathLater2 = Paths.get(args[1]).toAbsolutePath();
+        Path pathDestination = Paths.get(args[2]).toAbsolutePath();
 
-        if (layer1.equals(layer2)) {
+        if (args[0].equals(args[1])) {
             System.out.println("ERROR: The original and edited files can't be the same!");
             return;
         }
-        if (!layer1.endsWith(".tim") || !layer2.endsWith(".tim")) {
+
+        if (!args[0].toLowerCase().endsWith(".tim") || !args[1].toLowerCase().endsWith(".tim")) {
             System.out.println("ERROR: You have to use this with .tim files!");
             return;
         }
 
-        mergeTIM(layer1, layer2, destination);
+        mergeTIM(pathLayer1, pathLater2, pathDestination);
     }
 
-    public static void mergeTIM(String l1, String l2, String dest) {
+    /**
+     * @param pathLayer1
+     * @param pathLayer2
+     * @param pathDestination
+     */
+    public static void mergeTIM(Path pathLayer1, Path pathLayer2, Path pathDestination) {
         try {
             // Open the TIM files with the layers, exit if a file doesn't exist
-            RandomAccessFile f1 = new RandomAccessFile(l1, "r");
-            RandomAccessFile f2 = new RandomAccessFile(l2, "r");
+            RandomAccessFile fileLayer1 = new RandomAccessFile(pathLayer1.toString(), "r");
+            RandomAccessFile fileLayer2 = new RandomAccessFile(pathLayer2.toString(), "r");
 
             // Stop if the size is different
-            if (f1.length() != f2.length()) {
-                f1.close();
-                f2.close();
+            if (fileLayer1.length() != fileLayer2.length()) {
+                fileLayer1.close();
+                fileLayer2.close();
                 System.err.println("ERROR: The TIM files have different sizes.");
                 return;
             }
@@ -87,29 +92,31 @@ public class Main {
             // Read the header of layer1 (52 bytes) and modify the number of CLUTs to 2 (byte 18)
             byte[] header_l1 = new byte[52];
 
-            f1.read(header_l1);
+            fileLayer1.read(header_l1);
             header_l1[18] = 2;
+            //fix clut number
+            header_l1[8] = 0x4c;
 
             // Read the extra 12 bytes after the CLUT of layer1 (it contains Img Org X, Img Org Y and two more things...  I think)
             byte[] extra_l1 = new byte[12];
-            f1.read(extra_l1);
+            fileLayer1.read(extra_l1);
 
             // Read the CLUT of layer 2 (offset 20, 32 bytes)
             byte[] clut_l2 = new byte[32];
-            f2.skipBytes(20);
-            f2.read(clut_l2);
-            f2.skipBytes(12); // skip the extra bytes in layer 2
+            fileLayer2.skipBytes(20);
+            fileLayer2.read(clut_l2);
+            fileLayer2.skipBytes(12); // skip the extra bytes in layer 2
 
             // Read the image data from both layers (file length - 64) *** FILES MUST ONLY HAVE 1 CLUT, OTHERWISE THIS FAILS!
-            long datasize = f1.length() - 64;
+            long datasize = fileLayer1.length() - 64;
             byte[] l1_data = new byte[(int) datasize];
             byte[] l2_data = new byte[(int) datasize];
 
-            f1.read(l1_data);
-            f2.read(l2_data);
+            fileLayer1.read(l1_data);
+            fileLayer2.read(l2_data);
 
-            f1.close();
-            f2.close();
+            fileLayer1.close();
+            fileLayer2.close();
 
             // New image data = layer1 data OR layer2 data
             byte[] new_data = new byte[(int) datasize];
@@ -129,7 +136,7 @@ public class Main {
             }
 
             // Open the destination file, exit if we can't create the file
-            RandomAccessFile f3 = new RandomAccessFile(dest, "rw");
+            RandomAccessFile f3 = new RandomAccessFile(pathDestination.toString(), "rw");
 
             // Write in dest: modified header of layer1 + CLUT of layer2 + extra_l1 + new image data
             f3.write(header_l1);
@@ -139,7 +146,7 @@ public class Main {
 
             f3.close();
 
-            System.out.println("SUCCESS: File " + dest + " created successfully!");
+            System.out.println("SUCCESS: File " + pathDestination.toString() + " created successfully!");
 
         } catch (FileNotFoundException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
@@ -150,6 +157,11 @@ public class Main {
         }
     }
 
+    /**
+     * @param b1
+     * @param b2
+     * @return
+     */
     public static byte getNewData(byte b1, byte b2) {
         Integer result = 0x00;
         int color_l1_h1 = 0;
