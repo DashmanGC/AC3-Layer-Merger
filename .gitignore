@@ -45,3 +45,6 @@ Temporary Items
 
 .idea
 *.tim
+
+.directory
+target/
