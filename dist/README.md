@@ -1,6 +1,6 @@
 # Ace Combat 3 Layer Merger for TIM files v1.2
 
-## What's new?  
+## What's new?
 
 Supports relative and absolute paths, correctly places
 the number of the CLUT in the header (0x4C)
@@ -22,7 +22,8 @@ java -jar ac3lm.jar <TIM_layer1> <TIM_layer2> <output_file>
 * DON'T try to merge TIM files with more than one CLUT, the result
   won't be pretty.
 
-* This program doesn't support batches, sorry.
+* This program doesn't support batches, but you could write a script
+  for that.
 
 * Supports relative and absolute paths! 
 
